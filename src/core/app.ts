@@ -10,8 +10,22 @@ import adminRoutes from '../modules/admin/admin.routes';
 const app = new Hono<{ Bindings: Env }>();
 
 // Serve Web Admin static files
-app.use('/admin/*', serveStatic({ root: './public' }));
-app.use('/public/*', serveStatic({ root: './public' }));
+app.use('/admin/*', async (c, next) => {
+  try {
+    return await serveStatic({ root: './public' })(c, next);
+  } catch (e: any) {
+    if (e.message && e.message.includes('__STATIC_CONTENT')) return next();
+    throw e;
+  }
+});
+app.use('/public/*', async (c, next) => {
+  try {
+    return await serveStatic({ root: './public' })(c, next);
+  } catch (e: any) {
+    if (e.message && e.message.includes('__STATIC_CONTENT')) return next();
+    throw e;
+  }
+});
 app.get('/admin', (c) => c.redirect('/admin/index.html'));
 
 // Middleware: Rate limiting and Logging
@@ -44,7 +58,7 @@ app.use('*', async (c, next) => {
 
 // Mount feature routers
 app.route('/v1', chatRoutes);
-app.route('/', adminRoutes);
+app.route('/admin/api', adminRoutes);
 
 // Observability Endpoints
 app.get('/metrics', (c) => {
